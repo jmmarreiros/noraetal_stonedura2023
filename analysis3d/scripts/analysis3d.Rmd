@@ -1,0 +1,129 @@
+---
+title: "Plots 3D data"
+author: David Nora, Joao Marreiros, Walter Gneisinger
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r Knitr Options, include=FALSE}
+knitr::opts_chunk$set(comment=NA, message=FALSE, indent="", error=TRUE)
+
+```
+
+---
+
+# Content
+This script reads and plots the data from the 3D volume loss, which was calculated using CloudCompare cloud-to-mesh distance tool. 
+The knit directory for this script is the project directory.
+
+---
+
+# Load packages
+```{r}
+library(R.utils)
+library(ggplot2)
+library(tools)
+library(tidyverse)
+library(doBy)
+library(ggrepel)
+
+```
+
+
+---
+
+# Load data db 
+```{r}
+
+# Cloud-to-mesh calculations (before and after) for each sample were compiled in a single .csv file. File is formatted as exported from CloudCompare. We add a new column "Cycles".
+# Import dataset
+imp_data <- read_csv2("../rawdata/3dedge.csv")
+str(imp_data)
+
+```
+
+# Reorder raw material categories
+```{r}
+
+imp_data$raw.material <- factor(imp_data$raw.material, levels=c('flint', 'obsidian', 'dacite', 'quartzite'))
+
+```
+
+
+# organise and sort data
+
+```{r}
+
+# organise and represent data differently so that mean and sd can be calculated
+# now it shows how many times a value (distance) is represented by each class (sample segmentation)
+
+data.expanded <- imp_data[rep(row.names(imp_data), imp_data$value), 1:7]
+
+write_csv(data.expanded, "../deriveddata/dataexpanded.csv")
+
+```
+
+# Summarize data
+
+```{r}
+
+# Calculate distance (edge reduction) means between raw materials, samples and cycles
+
+## exclude 0-500 cycles, which corresponds to the starting and ending point
+data.expanded.cycles <- data.expanded %>% filter(!cycle == "0-500")
+
+## Calculate
+
+volumelossstats <- data.expanded.cycles %>% group_by(ID, grain, raw.material, cycle) %>%
+      summarise(
+      vlcount = n(),
+      vlmax = max(value, na.rm = TRUE),
+      vlmin = min (value, na.rm = TRUE),
+      vlmean = mean(value, na.rm = TRUE),
+      vlsd = sd(value, na.rm = TRUE),
+      vlmedian = median(value, na.rm = TRUE),
+   )
+
+write_csv(volumelossstats, "../stats/volumelossstats.csv")
+
+```
+
+# Plot data organised by raw material and sample ID
+
+```{r}
+
+volumelossstats$raw.material <- factor(volumelossstats$raw.material, levels=c('flint', 'obsidian', 'dacite', 'quartzite'))
+
+volumelossstats$grain <- factor(volumelossstats$grain, levels=c("fine", "coarse"))
+
+# Plot data (edge reduction) organised by raw material and cycle (sequential experiment: 0-125, 125-250, 250-500)
+
+## Plot selected data (cycles)
+
+edre <- ggplot(data = volumelossstats, aes(x = cycle, y = vlmax)) + 
+  geom_boxplot(aes(colour = grain, linetype = raw.material), outlier.colour = "", outlier.shape = 1) +
+  scale_linetype_manual(values=c("twodash", "dotted", "solid", "longdash")) +
+  geom_jitter(aes(colour = grain), alpha=0.2, position=position_jitter(w=0.1,h=0.1)) +
+  labs(y = "Edge wear (Ew)", x = "Cycles", colour = "Category", linetype = "Raw material")
+
+ggsave("../plots/cycles_rawmaterial.png")
+
+print(edre)
+
+```
+
+---
+
+# sessionInfo() and RStudio version
+
+```{r}
+sessionInfo()
+
+```
+
+---
+
+END OF SCRIPT

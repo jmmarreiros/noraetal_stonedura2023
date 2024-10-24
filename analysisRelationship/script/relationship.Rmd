@@ -1,0 +1,129 @@
+---
+title: "Relationship betwen variables"
+author: David Nora, Joao Marreiros, Walter Gneisinger
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r Knitr Options, include=FALSE}
+knitr::opts_chunk$set(comment=NA, message=FALSE, indent="", error=TRUE)
+
+```
+
+---
+
+# Goal of the script
+This script analysis the relationship between the different variables.
+The knit directory for this script is the project directory.
+
+---
+
+# Load packages
+```{r}
+library(R.utils)
+library(ggplot2)
+library(tools)
+library(tidyverse)
+library(ggpubr)
+
+```
+
+---
+
+# Load data db 
+```{r}
+
+# Derived data for each sample on penetration depth, leeb rebound hardness and edge reduction, were combined in a single .csv file
+
+# Import dataset
+imp_data <- read_csv2("../rawdata/data.csv")
+str(imp_data)
+
+```
+
+# Reorder raw material categories
+```{r}
+
+imp_data$rawmaterial <- factor(imp_data$rawmaterial, levels=c('Flint', 'Obsidian', 'Dacite', 'Quartzite'))
+
+```
+
+# Plot and explore data
+
+```{r}
+
+# Inspect dataset, check relationships
+
+#depth vs hardness (scatter plot)
+scat1 <- ggplot(imp_data,aes(hlc, depth, shape = rawmaterial, color = grain))+
+  geom_point() +
+  stat_conf_ellipse() +
+  labs(y = "Penetration depth (mm)", x = "Hardness (HLC)", colour = "Category", shape = "Raw material")
+
+
+print(scat1)
+ggsave("../plots/hlcdepth.png")
+
+#edge attrition vs hardness (scatter plot)
+scat2 <- ggplot(imp_data,aes(hlc, ahd, shape = rawmaterial, color = grain)) + 
+  geom_point() +
+  stat_conf_ellipse() +
+  labs(y = "Edge wear (Ew)", x = "Hardness (HLC)", colour = "Category", shape = "Raw material")
+
+
+print(scat2)
+ggsave("../plots/hlcahd.png")
+
+#edge attrition vs depth (scatter plot), not sure this one makes sense
+scat3 <- ggplot(imp_data,aes(ahd, depth, shape = rawmaterial, color = grain)) + 
+  geom_point() +
+  stat_conf_ellipse() + 
+  labs(y = "Edge wear (Ew)", x = "Penetration depth (mm)", colour = "Category", shape = "Raw material")
+
+
+print(scat3)
+ggsave("../plots/ahddepth.png")
+
+# arrange plots in a single figure
+arranged <- ggarrange(scat1, scat3, scat2, common.legend = TRUE, ncol = 3, nrow = 1, font.label = list(size=10))
+
+print(arranged)
+ggsave("../plots/arranged.jpg", width = 8, height = 4)
+
+#Efficiency (scatter plot effectiveness vs edge attrition, organized by cycle)
+# efficiency = (depth / edge attrition)
+
+scat4 <- ggplot(imp_data,aes(ahd, depth, shape = rawmaterial, color = grain)) + 
+  geom_point() +
+  facet_grid(. ~ cycle) +
+  stat_conf_ellipse() +
+  labs(y = "Penetration depth (mm)", x = "Edge wear (Ew)", colour = "Category", shape = "Raw material")
+
+print(scat4)
+ggsave("../plots/cyle.png")
+
+scat5 <- ggplot(imp_data,aes(ahd, depth, shape = rawmaterial, color = grain)) + 
+  geom_point() +
+  stat_conf_ellipse() +
+  labs(y = "Penetration depth (mm)", x = "Edge wear (Ew)", colour = "Category", shape = "Raw material")
+
+print(scat5)
+ggsave("../plots/total.png")
+
+```
+
+---
+
+# sessionInfo() and RStudio version
+
+```{r}
+sessionInfo()
+
+```
+
+---
+
+END OF SCRIPT

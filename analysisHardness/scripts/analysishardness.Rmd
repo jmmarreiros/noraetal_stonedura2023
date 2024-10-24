@@ -1,0 +1,149 @@
+---
+title: "Plots Equotip Leeb rebound C hardness measurements"
+author: David Nora, Joao Marreiros, Walter Gneisinger
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(comment = NA, message = FALSE, indent = "", error = TRUE)
+
+```
+
+---
+
+# Content
+This script reads and plots the data from the  Leeb Rebound hardness.  Hardness was measured on each rock using the device Equotip 550 Leeb Impact device C (HLC). For details on the methods and data acquisition, please visit the Materials and Methods section of the paper. 
+
+The knit directory for this script is the project directory.
+
+---
+# Load packages
+
+```{r}
+
+library(tidyverse)
+library(AICcmodavg)
+library(ggplot2)
+library(utils)
+library(qwraps2)
+library(kableExtra)
+library(doBy)
+library(ggpubr)
+
+```
+
+------------------------------------------------------------------------
+
+# Read in original xlsx-file
+
+```{r}
+# List all CSV files in dir_in
+
+harddata <- read_csv2("../rawdata/data.csv")
+
+# A total of 10 measurements were taken on each rock sample, 4 raw materials, 6 samples each
+
+```
+
+# Organise data
+
+```{r}
+# organising and summarising data by Sample ID
+longdata <- harddata %>%
+  gather("M1", "M2","M3", "M4", "M5","M6","M7", "M8", "M9", "M10", key = Measurment, value = HLC)
+
+# Show new format
+longdata
+
+# Save the new format
+write_csv(longdata, "../deriveddata/longdata.csv")
+
+```
+
+# Descriptive stats
+
+```{r}
+# descriptive statistics
+# summarise data by each sample
+
+# summarise by "Raw Material" but keep other columns
+
+hlcstatsmaterial <- longdata %>% group_by(rawmaterial) %>%
+      summarise(
+      hlccount = n(),
+      hlcmax = max(HLC, na.rm = TRUE),
+      hlcmin = min (HLC, na.rm = TRUE),
+      hlcmean = mean(HLC, na.rm = TRUE),
+      hlcsd = sd(HLC, na.rm = TRUE),
+      hlcmedian = median(HLC, na.rm = TRUE),
+  ) 
+
+# summarise by "Sample/ID" but keep other columns
+
+hlcstatssample <- longdata %>% group_by(ID, rawmaterial) %>%
+      summarise(
+      vlcount = n(),
+      vlmax = max(HLC, na.rm = TRUE),
+      vlmin = min (HLC, na.rm = TRUE),
+      vlmean = mean(HLC, na.rm = TRUE),
+      vlsd = sd(HLC, na.rm = TRUE),
+      vlmedian = median(HLC, na.rm = TRUE),
+   )
+
+# View results
+hlcstatsmaterial
+hlcstatssample
+
+# Same results
+write_csv(hlcstatsmaterial, "../stats/stats_hardness_maerial.csv")
+write_csv(hlcstatssample, "../stats/stats_hardness_sample.csv")
+
+```
+
+# Reorder raw material categories
+```{r}
+
+longdata$rawmaterial <- factor(longdata$rawmaterial, levels=c('flint', 'obsidian', 'dacite', 'quartzite'))
+
+```
+
+# Plot data (one numerical continuious variable - HLC)
+
+```{r}
+# Boxplot
+
+bp <- ggplot (longdata, aes(rawmaterial, HLC, color = grain)) + 
+  geom_jitter(aes(shape = rawmaterial)) + 
+  labs(x="Raw material", y="Leeb Rebound Hardness in HLC", title="", color="Category", shape="Raw material") +
+  geom_boxplot()
+             
+
+print(bp)
+
+ggsave("../plots/hardnessplot.png")
+
+```
+
+```{r}
+# Density plot
+dp <- ggplot (longdata, aes(x = HLC, color = grain, linetype = rawmaterial)) + 
+             theme_classic() +
+  scale_linetype_manual(values=c("twodash", "dotted", "solid", "longdash")) +
+             geom_density() + labs(x="Leeb Rebound Hardness in HLC", y="Density", title="")
+
+print(dp)
+
+ggsave("../plots/densityplot.png")
+
+```
+
+# sessionInfo() and RStudio version
+
+```{r}
+sessionInfo()
+
+```
